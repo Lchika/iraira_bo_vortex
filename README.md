@@ -2,9 +2,12 @@
  - イライラ棒渦巻コース用プログラム
 
 ## 構成図
-![block](https://github.com/Lchika/iraira_bo_vortex/blob/images/doc/block.png)
-![main_arduino_pin](https://github.com/Lchika/iraira_bo_vortex/blob/images/doc/ledArduino.png)
-![led_arduino_pin](https://github.com/Lchika/iraira_bo_vortex/blob/images/doc/mainArduino.png)
+ - ブロック図
+![block](https://github.com/Lchika/iraira_bo_vortex/blob/images/doc/block.png =100x)
+ - メインArduinoピンアサイン
+![main_arduino_pin](https://github.com/Lchika/iraira_bo_vortex/blob/images/doc/ledArduino.png =100x)
+ - LED制御用Arduinoピンアサイン
+![led_arduino_pin](https://github.com/Lchika/iraira_bo_vortex/blob/images/doc/mainArduino.png =100x)
 
 ## iraira_vortex_main
  - メインプログラム一式
