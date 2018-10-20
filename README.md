@@ -1,13 +1,13 @@
 # iraira_bo_vortex
  - イライラ棒渦巻コース用プログラム
 
-## ディレクトリ構成
-iraira_bo_vortex/  
-  ├ iraira_vortex_main/  
-  └ iraira_vortex_led/
+## 構成図
+![block](https://github.com/Lchika/iraira_bo_vortex/blob/images/doc/block.png)
+![main_arduino_pin](https://github.com/Lchika/iraira_bo_vortex/blob/images/doc/ledArduino.png)
+![led_arduino_pin](https://github.com/Lchika/iraira_bo_vortex/blob/images/doc/mainArduino.png)
 
 ## iraira_vortex_main
- - メインプログラム
+ - メインプログラム一式
 
 ### iraira_vortex_main.ino
 ### position_detecter.hpp | cpp
@@ -18,6 +18,6 @@ iraira_bo_vortex/
 ### dio_communicater.hpp | cpp
 
 ## iraira_vortex_led
- - LED制御用プログラム
+ - LED制御用プログラム一式
 
 ### iraira_vortex_led.ino
