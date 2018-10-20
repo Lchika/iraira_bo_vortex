@@ -4,8 +4,10 @@
 ## 構成図
  - ブロック図
  <img src="https://github.com/Lchika/iraira_bo_vortex/blob/images/doc/block.png" width="400px">
+
  - メインArduinoピンアサイン
  <img src="https://github.com/Lchika/iraira_bo_vortex/blob/images/doc/ledArduino.png" width="400px">
+
  - LED制御用Arduinoピンアサイン
  <img src="https://github.com/Lchika/iraira_bo_vortex/blob/images/doc/mainArduino.png" width="400px">
 
