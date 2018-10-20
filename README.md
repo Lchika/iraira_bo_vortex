@@ -3,11 +3,11 @@
 
 ## 構成図
  - ブロック図
-![block](https://github.com/Lchika/iraira_bo_vortex/blob/images/doc/block.png =100x)
+ <img src="https://github.com/Lchika/iraira_bo_vortex/blob/images/doc/block.png" width="100px">
  - メインArduinoピンアサイン
-![main_arduino_pin](https://github.com/Lchika/iraira_bo_vortex/blob/images/doc/ledArduino.png =100x)
+ <img src="https://github.com/Lchika/iraira_bo_vortex/blob/images/doc/ledArduino.png" width="100px">
  - LED制御用Arduinoピンアサイン
-![led_arduino_pin](https://github.com/Lchika/iraira_bo_vortex/blob/images/doc/mainArduino.png =100x)
+ <img src="https://github.com/Lchika/iraira_bo_vortex/blob/images/doc/mainArduino.png" width="100px">
 
 ## iraira_vortex_main
  - メインプログラム一式
