@@ -5,19 +5,23 @@
  * @details
  */
 
+#include <StandardCplusplus.h>
+#include <cmath>
 #include <Arduino.h>
 #include <Adafruit_NeoPixel.h>
 #include <SPI.h>
 
-#define PIN_LED_START               2       // 入口のLED
-#define PIN_LED_GOAL                4       // 出口のLED
+#define PIN_LED_START               2       //  入口のLED
+#define PIN_LED_GOAL                4       //  出口のLED
 #define PIN_SPI_SS                  10
 #define PIN_SPI_SCK                 11
 #define PIN_SPI_MISO                12
 #define PIN_SPI_MOSI                13
 
-#define NUM_LEDS_START  5       // 入口のLEDの数
-#define NUM_LEDS_GOAL   5       // 出口のLEDの数
+#define NUM_LEDS_START  5       //  入口のLEDの数
+#define NUM_LEDS_GOAL   5       //  出口のLEDの数
+
+#define DEF_COLOR_CHANGE_INTERVAL   1000    //  [ms]
 
 enum MAIN_ARDUINO_COMM_E {
   MAIN_ARDUINO_COMM_NONE = 0,
@@ -28,8 +32,13 @@ enum MAIN_ARDUINO_COMM_E {
   MAIN_ARDUINO_COMM_SCORE,
 };
 
-static bool lf_light_pixels_in_order(Adafruit_NeoPixel *pixels, int color[3], int delay_time);
+static bool lf_light_pixels_in_order(Adafruit_NeoPixel *pixels_s, Adafruit_NeoPixel *pixels_g, int color[3], int delay_time);
+static bool lf_light_pixels_in_rev_order(Adafruit_NeoPixel *pixels, int color[3], int delay_time);
 static bool lf_change_pixels_color_in_order(Adafruit_NeoPixel *pixels, int color[3], int delay_time);
+static bool lf_light_pixels_color_blink(Adafruit_NeoPixel *pixels_s, Adafruit_NeoPixel *pixels_g, int color[3]);
+static bool lf_light_pixels_color_alter(Adafruit_NeoPixel *pixels_s, Adafruit_NeoPixel *pixels_g,
+                                        int delay_time, int num_side_change, int num_color_change);
+static bool lf_convert_time_to_color_info(unsigned long now_time, int ret_range, int color[3]);
 
 Adafruit_NeoPixel *leds_s;
 Adafruit_NeoPixel *leds_g;
@@ -86,7 +95,9 @@ void loop(){
   int red[3] = {150, 0, 0};
   int green[3] = {0, 150, 0};
   int blue[3] = {0, 0, 150};
+  int led_color[3] = {0, 0, 0};
 
+  unsigned long now_time = millis();
   switch(state){
     case MAIN_ARDUINO_COMM_NONE:
       //  何もしない
@@ -94,17 +105,24 @@ void loop(){
     case MAIN_ARDUINO_COMM_START:
       //  START状態
       Serial.println("state = START");
-      lf_light_pixels_in_order(leds_s, red, 100);
+      lf_convert_time_to_color_info(now_time, DEF_COLOR_CHANGE_INTERVAL, led_color);
+      lf_light_pixels_in_order(leds_s, leds_g, led_color, 50);
       break;
     case MAIN_ARDUINO_COMM_CENTER:
       //  CENTER状態
       Serial.println("state = CENTER");
-      lf_light_pixels_in_order(leds_s, green, 100);
+      lf_convert_time_to_color_info(now_time, DEF_COLOR_CHANGE_INTERVAL, led_color);
+      lf_light_pixels_color_blink(leds_s, leds_g, led_color);
+      delay(100);
+      lf_convert_time_to_color_info(now_time + (unsigned long)(DEF_COLOR_CHANGE_INTERVAL * 0.75),
+                                    DEF_COLOR_CHANGE_INTERVAL, led_color);
+      lf_light_pixels_color_blink(leds_s, leds_g, led_color);
+      delay(100);
       break;
     case MAIN_ARDUINO_COMM_GOAL:
       //  GOAL状態
       Serial.println("state = GOAL");
-      lf_light_pixels_in_order(leds_s, blue, 100);
+      lf_light_pixels_color_alter(leds_s, leds_g, 50, 2, 5);
       state = MAIN_ARDUINO_COMM_NONE;
       break;
     default:
@@ -113,12 +131,37 @@ void loop(){
       break;
   }
 
-  delay(100);
   return;
 }
 
 /**
  * @fn NeoPixel順番点灯処理
+ * @brief
+ * @param[in] pixels_s        入口NeoPixelのポインタ
+ *            pixels_g        出口NeoPixelのポインタ
+ *            color[3]        表示する色
+ *            daley_time      表示間隔[ms]
+ * @return None
+ * @detail
+ */
+static bool lf_light_pixels_in_order(Adafruit_NeoPixel *pixels_s, Adafruit_NeoPixel *pixels_g,
+                                      int color[3], int delay_time){
+
+  for(uint16_t i = 0; i < pixels_s->numPixels(); i++){
+    //  すべてのLEDを消灯してから処理対象LEDのみ指定色で上書きする
+    pixels_s->clear();
+    pixels_g->clear();
+    pixels_s->setPixelColor(i, pixels_s->Color(color[0], color[1], color[2]));
+    pixels_g->setPixelColor(i, pixels_g->Color(color[0], color[1], color[2]));
+    pixels_s->show();
+    pixels_g->show();
+    delay(delay_time);
+  }
+  return true;
+}
+
+/**
+ * @fn NeoPixel逆順番点灯処理
  * @brief
  * @param[in] pixels          NeoPixelのポインタ
  *            color[3]        表示する色
@@ -126,9 +169,9 @@ void loop(){
  * @return None
  * @detail
  */
-static bool lf_light_pixels_in_order(Adafruit_NeoPixel *pixels, int color[3], int delay_time){
+static bool lf_light_pixels_in_rev_order(Adafruit_NeoPixel *pixels, int color[3], int delay_time){
 
-  for(uint16_t i = 0; i < pixels->numPixels(); i++){
+  for(uint16_t i = pixels->numPixels() - 1; i >= 0; i--){
     //  すべてのLEDを消灯してから処理対象LEDのみ指定色で上書きする
     pixels->clear();
     pixels->setPixelColor(i, pixels->Color(color[0], color[1], color[2]));
@@ -159,14 +202,98 @@ static bool lf_change_pixels_color_in_order(Adafruit_NeoPixel *pixels, int color
 }
 
 /**
+ * @fn NeoPixel色全点灯処理
+ * @brief
+ * @param[in] pixels_s        入口NeoPixelのポインタ
+ *            pixels_g        出口NeoPicelのポインタ
+ *            color[3]        表示する色
+ * @return None
+ * @detail
+ */
+static bool lf_light_pixels_color_blink(Adafruit_NeoPixel *pixels_s, Adafruit_NeoPixel *pixels_g, int color[3]){
+
+  for(uint16_t i = 0; i < pixels_s->numPixels(); i++){
+    pixels_s->setPixelColor(i, pixels_s->Color(color[0], color[1], color[2]));
+    pixels_g->setPixelColor(i, pixels_g->Color(color[0], color[1], color[2]));
+  }
+  pixels_s->show();
+  pixels_g->show();
+  return true;
+}
+
+/**
+ * @fn NeoPixel色交互点灯処理
+ * @brief
+ * @param[in] pixels_s          入口NeoPixelのポインタ
+ *            pixels_g          出口NeoPicelのポインタ
+ *            delay_time        色切り替わり時間[ms]
+ *            num_side_change   横色切り替わり回数
+ *            num_color_change  基準色切り替わり回数
+ * @return None
+ * @detail
+ */
+static bool lf_light_pixels_color_alter(Adafruit_NeoPixel *pixels_s, Adafruit_NeoPixel *pixels_g,
+                                        int delay_time, int num_side_change, int num_color_change){
+
+  int led_color1[3] = {0, 0, 0};
+  int led_color2[3] = {0, 0, 0};
+  
+  for(int color_change_count = 0; color_change_count <= num_color_change; color_change_count++){
+    unsigned long now_time = millis();
+    lf_convert_time_to_color_info(now_time, DEF_COLOR_CHANGE_INTERVAL, led_color1);
+    lf_convert_time_to_color_info(now_time + (unsigned long)(0.75 * DEF_COLOR_CHANGE_INTERVAL),
+                                  DEF_COLOR_CHANGE_INTERVAL, led_color2);
+
+    int comp_num = -1;
+    for(int side_change_count = 0; side_change_count <= num_side_change; side_change_count++){ 
+      for(uint16_t i = 0; i < pixels_s->numPixels(); i++){
+        if(((i % 2) * 2) == (comp_num + 1)){
+          pixels_s->setPixelColor(i, pixels_s->Color(led_color1[0], led_color1[1], led_color1[2]));
+          pixels_g->setPixelColor(i, pixels_g->Color(led_color1[0], led_color1[1], led_color1[2]));
+        }else{
+          pixels_s->setPixelColor(i, pixels_s->Color(led_color2[0], led_color2[1], led_color2[2]));
+          pixels_g->setPixelColor(i, pixels_g->Color(led_color2[0], led_color2[1], led_color2[2]));
+        }
+      }
+      pixels_s->show();
+      pixels_g->show();
+      comp_num *= -1;
+      delay(delay_time);
+    }
+  }
+  return true;
+}
+
+/**
  * @fn 時間→虹色情報変換処理
  * @brief
- * @param[in] time           時間[-]
+ * @param[in] now_time           時間[ms]
  * @param[out] color[3]      虹色情報
  * @return None
  * @detail
  */
-static bool lf_convert_time_to_color_info(int time, int color[3]){
+static bool lf_convert_time_to_color_info(unsigned long now_time, int ret_range, int color[3]){
+
+  static const double pi = 3.141592653589793;
+  int f_mills = now_time % (int)(ret_range * 1.5);
+  //  red
+  double red = 0.;
+  if(f_mills > 0 && f_mills < ret_range){
+    red = sin(((double)f_mills / (double)ret_range) * pi);
+  }
+  double green = 0.;
+  if(f_mills > (0.5 * ret_range) && f_mills < (1.5 * ret_range)){
+    green = sin((((double)f_mills / (double)ret_range) - 0.5) * pi);
+  }
+  double blue = 0.;
+  if(f_mills < (0.5 * ret_range)){
+    blue = sin((((double)f_mills / (double)ret_range) + 0.5) * pi);
+  }else if(f_mills > ret_range){
+    blue = sin((((double)f_mills / (double)ret_range) - 1.0) * pi);
+  }
+  color[0] = (int)(255 * red);
+  color[1] = (int)(255 * green);
+  color[2] = (int)(255 * blue);
   return true;
 }
 
