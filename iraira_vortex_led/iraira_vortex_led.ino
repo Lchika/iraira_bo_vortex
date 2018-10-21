@@ -5,8 +5,6 @@
  * @details
  */
 
-#include <StandardCplusplus.h>
-#include <cmath>
 #include <Arduino.h>
 #include <Adafruit_NeoPixel.h>
 #include <SPI.h>
