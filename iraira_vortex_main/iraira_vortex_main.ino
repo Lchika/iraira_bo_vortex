@@ -11,6 +11,7 @@
 #include <DFRobotDFPlayerMini.h>
 #include "position_detecter.hpp"
 #include <SPI.h>
+#include <FlexiTimer2.h>
 #include <Arduino.h>
 
 //  ピンアサイン
@@ -45,7 +46,8 @@ SoftwareSerial softwareSerial2(PIN_SOFT_RX2, PIN_SOFT_TX2);   // RX, TX
 DFRobotDFPlayerMini dFPlayer;
 DFRobotDFPlayerMini dFPlayer2;
 PositionDetecter positionDetecter({PIN_PHOTO_INT_S, PIN_PHOTO_INT_C, PIN_PHOTO_INT_G});
-
+static bool is_play_random_voice = false;
+static bool is_need_to_set_timer = false;
 
 /**
  * @fn セットアップ処理
@@ -101,9 +103,9 @@ void setup(){
   }
   Serial.println(F("DFPlayer Mini online."));
 
-  //  DFPlayerの音量は10にしておく
+  //  DFPlayerの音量は15にしておく
   softwareSerial.listen();
-  dFPlayer.volume(10);
+  dFPlayer.volume(15);
   //  DFPlayer2の音量は10にしておく
   softwareSerial2.listen();
   dFPlayer2.volume(10);
@@ -131,6 +133,7 @@ void loop(){
   }
   //  棒位置検出
   int position = positionDetecter.get_position();
+  long rand_num;
   switch(position){
     case -2:
       Serial.println("position NOT detected.");
@@ -141,31 +144,53 @@ void loop(){
     case PIN_PHOTO_INT_S:
       Serial.println("position = start");
       //  メインBGM再生
+      softwareSerial2.listen();
       dFPlayer2.play(1);         //Play the first mp3
       //  実況1再生
-      //dFPlayer.play(1);
+      softwareSerial.listen();
+      dFPlayer.playMp3Folder(1);
       //  実況ランダム再生開始
+      is_play_random_voice = true;
+      is_need_to_set_timer = true;
       //  LED点灯パターン通知
       lf_send_byte_by_spi(LED_ARDUINO_COMM_START);
       break;
     case PIN_PHOTO_INT_C:
       Serial.println("position = center");
       //  実況2再生
-      //dFPlayer.play(2);
+      softwareSerial.listen();
+      dFPlayer.playMp3Folder(4);
       //  LED点灯パターン通知
       lf_send_byte_by_spi(LED_ARDUINO_COMM_CENTER);
       break;
     case PIN_PHOTO_INT_G:
       Serial.println("position = goal");
       //  実況3再生
-      //dFPlayer.play(3);
+      rand_num = random(2);
+      softwareSerial.listen();
+      if(rand_num == 0){
+        dFPlayer.playMp3Folder(7);
+      }else{
+        dFPlayer.playMp3Folder(8);
+      }
       //  メインBGM停止
+      softwareSerial2.listen();
       dFPlayer2.stop();
+      //  実況ランダム再生終了
+      is_play_random_voice = false;
       //  LED点灯パターン通知
       lf_send_byte_by_spi(LED_ARDUINO_COMM_GOAL);
       break;
     default:
       break;
+  }
+  if(is_need_to_set_timer){
+    //  3000ms~6000msの間でランダムにタイマーをセットする
+    long rand_time = random(3000, 6000);
+    FlexiTimer2::set(rand_time, lf_play_random_voice);
+    FlexiTimer2::start();
+    //  タイマーセット完了したので設定フラグを消去する
+    is_need_to_set_timer = false;
   }
 
   return;
@@ -184,4 +209,26 @@ static byte lf_send_byte_by_spi(byte send_data){
   byte return_data = SPI.transfer(send_data);
   digitalWrite(PIN_SPI_SS, HIGH);
   return return_data;
+}
+
+/**
+ * @fn ランダム実況再生処理
+ * @brief
+ * @param  None
+ * @return None
+ * @detail
+ */
+void lf_play_random_voice(void){
+  //  ランダム実況再生OFFになっているときは何もしない
+  if(!is_play_random_voice){
+    return;
+  }
+  //  タイマーストップ
+  FlexiTimer2::stop();
+  //  2~6の間でランダムに音声を再生
+  long rand_voice_num = random(2, 7);
+  softwareSerial.listen();
+  dFPlayer.playMp3Folder((uint8_t)rand_voice_num);
+  //  タイマー設定フラグを立てる
+  is_need_to_set_timer = true;
 }
