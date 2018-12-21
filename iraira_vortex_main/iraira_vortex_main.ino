@@ -12,6 +12,7 @@
 #include "position_detecter.hpp"
 #include <SPI.h>
 #include <FlexiTimer2.h>
+#include <Wire.h>
 #include <Arduino.h>
 
 //  ピンアサイン
