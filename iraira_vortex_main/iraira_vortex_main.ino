@@ -19,6 +19,10 @@
 #define PIN_SOFT_TX1              3
 #define PIN_SOFT_RX2              4
 #define PIN_SOFT_TX2              5
+#define PIN_10DIP_1               6         //  DIPロータリースイッチ入力1
+#define PIN_10DIP_2               8         //  DIPロータリースイッチ入力2
+#define PIN_10DIP_4               9         //  DIPロータリースイッチ入力4
+#define PIN_10DIP_8               17        //  DIPロータリースイッチ入力8
 #define PIN_SPI_SS                10
 #define PIN_PHOTO_INT_S           14
 #define PIN_PHOTO_INT_C           15
@@ -39,6 +43,8 @@ enum LED_ARDUINO_COMM_E {
 //  関数定義
 static bool lf_get_through_signal(int pos);
 static byte lf_send_byte_by_spi(byte send_data);
+static void setup_i2c(void);
+static int get_slave_address(void);
 
 //  変数定義
 SoftwareSerial softwareSerial(PIN_SOFT_RX1, PIN_SOFT_TX1);    // RX, TX
@@ -70,6 +76,9 @@ void setup(){
   softwareSerial.begin(9600);
   softwareSerial2.begin(9600);
   Serial.begin(115200);
+  
+  //  I2Cの設定
+  setup_i2c();
 
   //  SPI設定
   SPI.setClockDivider(SPI_CLOCK_DIV128);
@@ -231,4 +240,29 @@ void lf_play_random_voice(void){
   dFPlayer.playMp3Folder((uint8_t)rand_voice_num);
   //  タイマー設定フラグを立てる
   is_need_to_set_timer = true;
+}
+
+/**
+ * @fn I2Cセットアップ処理
+ * @brief
+ * @param　None
+ * @return None
+ * @detail
+ */
+static void setup_i2c(void){
+  Serial.println("i2c setup start");
+  Serial.println("slave address = " + String(get_slave_address()));
+  Wire.begin(get_slave_address());     //スレーブアドレスを取得してI2C開始
+  Serial.println("i2c setup end");
+}
+
+/**
+ * @fn I2Cスレーブアドレス取得処理
+ * @brief
+ * @param　None
+ * @return None
+ * @detail
+ */
+static int get_slave_address(void){
+  return digitalRead(PIN_10DIP_1) | (digitalRead(PIN_10DIP_2) << 1) | (digitalRead(PIN_10DIP_4) << 2) | (digitalRead(PIN_10DIP_8) << 3);
 }
