@@ -3,6 +3,12 @@
 #include <Wire.h>
 #include <Arduino.h>
 
+static const int I2C_BEGIN_TRANS    = 0;     //  通信開始通知
+static const int I2C_DETECT_HIT     = 1;     //  コース接触通知確認通知
+static const int I2C_DETECT_GOAL    = 2;     //  コース通過通知確認通知
+static const int I2C_CHECK_CONNECT  = 3;     //  疎通確認
+static const int I2C_EMPTY          = 99;
+
 bool DsubSlaveCommunicator::_active = false;
 char DsubSlaveCommunicator::dprint_buff[128];
 std::queue<int> DsubSlaveCommunicator::message_que;
@@ -129,17 +135,17 @@ bool DsubSlaveCommunicator::setup_i2c(unsigned char adress){
  * 参考:https://github.com/Lchika/IrairaBo_slavetemplate/blob/master/slave_template.ino
  */
 void DsubSlaveCommunicator::send_i2c_message(void){
-  DebugPrint("func start");
+  //DebugPrint("func start");
   if(!message_que.empty()){
     sprintf(dprint_buff, "send i2c [%d]", message_que.front());
     DebugPrint(dprint_buff);
     Wire.write(message_que.front());
     message_que.pop();
   }else{
-    DebugPrint("send i2c [EMPTY]");
+    //DebugPrint("send i2c [EMPTY]");
     Wire.write(I2C_EMPTY);
   }
-  DebugPrint("func end");
+  //DebugPrint("func end");
   return;
 }
 
@@ -157,6 +163,12 @@ void DsubSlaveCommunicator::handle_i2c_message(int byte_num){
       case I2C_BEGIN_TRANS:
         DebugPrint("this module active");
         _active = true;
+        break;
+      
+      //  疎通確認
+      case I2C_CHECK_CONNECT:
+        DebugPrint("check i2c connect");
+        message_que.push(I2C_CHECK_CONNECT);
         break;
       
       default:
